@@ -26,7 +26,7 @@ export default function TabLayout() {
         name="index"
         options={{
           title: 'Početna',
-          tabBarIcon: ({ color, focused }) => (
+          tabBarIcon: ({ focused }) => (
             <TabIcon emoji="🏠" focused={focused} />
           ),
         }}
@@ -35,7 +35,7 @@ export default function TabLayout() {
         name="ranklist"
         options={{
           title: 'Rang lista',
-          tabBarIcon: ({ color, focused }) => (
+          tabBarIcon: ({ focused }) => (
             <TabIcon emoji="🏆" focused={focused} />
           ),
         }}
@@ -44,7 +44,7 @@ export default function TabLayout() {
         name="skeniraj"
         options={{
           title: 'Skeniraj',
-          tabBarIcon: ({ color, focused }) => (
+          tabBarIcon: ({ focused }) => (
             <TabIcon emoji="📷" focused={focused} />
           ),
         }}
@@ -53,7 +53,7 @@ export default function TabLayout() {
         name="profil"
         options={{
           title: 'Profil',
-          tabBarIcon: ({ color, focused }) => (
+          tabBarIcon: ({ focused }) => (
             <TabIcon emoji="👤" focused={focused} />
           ),
         }}

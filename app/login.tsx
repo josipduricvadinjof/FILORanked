@@ -81,7 +81,7 @@ export default function LoginScreen() {
       <ScrollView contentContainerStyle={styles.scroll}>
         <View style={styles.gornji}>
           <Text style={styles.emoji}>📚</Text>
-          <Text style={styles.naslov}>NSK Ranked</Text>
+          <Text style={styles.naslov}>FILO Ranked</Text>
           <Text style={styles.podnaslov}>
             {jeRegistracija ? 'Stvori novi račun' : 'Prijavi se u svoj račun'}
           </Text>

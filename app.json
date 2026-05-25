@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "NSK Ranked",
-    "slug": "nskranked",
-    "version": "1.0.0",
+    "name": "FILO Ranked",
+    "slug": "filoranked",
+    "version": "2.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "nskranked",
+    "scheme": "filoranked",
     "userInterfaceStyle": "light",
     "splash": {
       "image": "./assets/images/splash-icon.png",
@@ -22,11 +22,7 @@
         "backgroundColor": "#6B2737"
       },
       "package": "com.nskranked.app",
-      "statusBarColor": "#2C1810",
-      "permissions": [
-        "android.permission.CAMERA",
-        "android.permission.RECORD_AUDIO"
-      ]
+      "statusBarColor": "#2C1810"
     },
     "web": {
       "bundler": "metro",
@@ -39,24 +35,18 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "NSK Ranked treba pristup kameri za skeniranje QR koda."
+          "cameraPermission": "FILO Ranked treba pristup kameri za skeniranje QR koda."
         }
       ],
       [
         "expo-image-picker",
         {
-          "photosPermission": "NSK Ranked treba pristup galeriji za profilnu sliku."
+          "photosPermission": "FILO Ranked treba pristup galeriji za profilnu sliku."
         }
       ]
     ],
     "experiments": {
       "typedRoutes": true
-    },
-    "extra": {
-      "router": {},
-      "eas": {
-        "projectId": "0d4fe2b7-6d9b-423a-bade-3ab04fbb28b0"
-      }
     }
   }
 }

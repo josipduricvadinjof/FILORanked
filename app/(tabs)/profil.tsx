@@ -6,20 +6,20 @@ import { useAuth } from '../../context/AuthContext';
 
 const achievementi = [
   { naziv: '🌅 Ranoranioc', opis: 'Dođi prije 8h', uvjet: (s: number) => s > 0 },
-  { naziv: '📚 10 sati', opis: 'Provedi 10h u NSK', uvjet: (s: number) => s >= 36000 },
-  { naziv: '📖 50 sati', opis: 'Provedi 50h u NSK', uvjet: (s: number) => s >= 180000 },
-  { naziv: '🏛 100 sati', opis: 'Provedi 100h u NSK', uvjet: (s: number) => s >= 360000 },
-  { naziv: '👑 Legenda NSK', opis: 'Provedi 200h u NSK', uvjet: (s: number) => s >= 720000 },
+  { naziv: '📚 10 sati', opis: 'Provedi 10h u knjižnici', uvjet: (s: number) => s >= 36000 },
+  { naziv: '📖 50 sati', opis: 'Provedi 50h u knjižnici', uvjet: (s: number) => s >= 180000 },
+  { naziv: '🏛 100 sati', opis: 'Provedi 100h u knjižnici', uvjet: (s: number) => s >= 360000 },
+  { naziv: '👑 FILO legenda', opis: 'Provedi 200h u knjižnici', uvjet: (s: number) => s >= 720000 },
   { naziv: '🔥 Tjedan streak', opis: '7 dana zaredom', uvjet: (_: number, streak: number) => streak >= 7 },
   { naziv: '💪 Mjesec streak', opis: '30 dana zaredom', uvjet: (_: number, streak: number) => streak >= 30 },
 ];
 
 function Level(sekunde: number): string {
-  if (sekunde >= 720000) return '👑 Legenda NSK';
+  if (sekunde >= 720000) return '👑 FILO legenda';
   if (sekunde >= 360000) return '🏛 Veteran';
   if (sekunde >= 180000) return '⭐ Akademik';
   if (sekunde >= 36000) return '📖 Čitač';
-  return '🌱 Novak';
+  return '🌱 Početnik';
 }
 
 function formatirajDatum(datumStr: string): string {
@@ -139,7 +139,7 @@ export default function ProfilScreen() {
       <View style={styles.statsRed}>
         <View style={styles.statKartica}>
           <Text style={styles.statBroj}>{formatirajSate(korisnik.ukupnoSekundi)}</Text>
-          <Text style={styles.statLabel}>ukupno u NSK</Text>
+          <Text style={styles.statLabel}>ukupno u knjižnici</Text>
         </View>
         <View style={styles.statKartica}>
           <Text style={styles.statBroj}>{korisnik.sesije.length}</Text>
@@ -160,7 +160,7 @@ export default function ProfilScreen() {
           <View style={[styles.progressFill, { width: `${postotak}%` }]} />
         </View>
         <Text style={styles.levelInfo}>
-          {Math.max(0, Math.floor((720000 - korisnik.ukupnoSekundi) / 3600))}h do "Legenda NSK"
+          {Math.max(0, Math.floor((720000 - korisnik.ukupnoSekundi) / 3600))}h do "FILO Legenda"
         </Text>
       </View>
 
