@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "FILO Ranked",
-    "slug": "filoranked",
+    "slug": "nskranked",
     "version": "2.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -22,7 +22,11 @@
         "backgroundColor": "#6B2737"
       },
       "package": "com.nskranked.app",
-      "statusBarColor": "#2C1810"
+      "statusBarColor": "#2C1810",
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -47,6 +51,13 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "0d4fe2b7-6d9b-423a-bade-3ab04fbb28b0"
+      }
+    },
+    "owner": "josip.duricvadinjof"
   }
 }
