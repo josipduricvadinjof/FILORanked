@@ -1,6 +1,7 @@
+import { useRouter } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import { useEffect, useState } from 'react';
-import { Alert, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 
 export default function LoginScreen() {
@@ -14,6 +15,7 @@ export default function LoginScreen() {
   const [resetModal, setResetModal] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
   const { prijava, registracija, resetLozinke, greska } = useAuth();
+  const router = useRouter();
 
   useEffect(() => {
     ucitajSpremljene();
@@ -21,6 +23,7 @@ export default function LoginScreen() {
 
   async function ucitajSpremljene() {
     try {
+      if (Platform.OS === 'web') return;
       const spremljeniEmail = await SecureStore.getItemAsync('email');
       const spremljenaLozinka = await SecureStore.getItemAsync('lozinka');
       const zapamtiVrijednost = await SecureStore.getItemAsync('zapamti');
@@ -42,14 +45,30 @@ export default function LoginScreen() {
         await registracija(ime.trim(), '@' + nadimak.trim().replace('@', ''), email.trim(), lozinka);
       } else {
         await prijava(email.trim(), lozinka);
-        if (zapamti) {
-          await SecureStore.setItemAsync('email', email.trim());
-          await SecureStore.setItemAsync('lozinka', lozinka);
-          await SecureStore.setItemAsync('zapamti', 'true');
-        } else {
-          await SecureStore.deleteItemAsync('email');
-          await SecureStore.deleteItemAsync('lozinka');
-          await SecureStore.setItemAsync('zapamti', 'false');
+
+        if (Platform.OS !== 'web') {
+          if (zapamti) {
+            await SecureStore.setItemAsync('email', email.trim());
+            await SecureStore.setItemAsync('lozinka', lozinka);
+            await SecureStore.setItemAsync('zapamti', 'true');
+          } else {
+            await SecureStore.deleteItemAsync('email');
+            await SecureStore.deleteItemAsync('lozinka');
+            await SecureStore.setItemAsync('zapamti', 'false');
+          }
+        }
+
+        if (typeof window !== 'undefined') {
+          const pendingAction = localStorage.getItem('pendingAction');
+          if (pendingAction === 'checkin') {
+            localStorage.removeItem('pendingAction');
+            router.replace('/checkin' as any);
+            return;
+          } else if (pendingAction === 'checkout') {
+            localStorage.removeItem('pendingAction');
+            router.replace('/checkout' as any);
+            return;
+          }
         }
       }
     } catch (e) {
@@ -60,16 +79,13 @@ export default function LoginScreen() {
 
   async function handleReset() {
     if (!resetEmail.trim()) {
-      Alert.alert('Greška', 'Unesite email adresu.');
+      alert('Unesite email adresu.');
       return;
     }
     const uspjeh = await resetLozinke(resetEmail.trim());
     if (uspjeh) {
-      Alert.alert(
-        '✅ Email poslan!',
-        'Provjerite email inbox za link za resetiranje lozinke.',
-        [{ text: 'OK', onPress: () => setResetModal(false) }]
-      );
+      alert('✅ Email poslan! Provjerite inbox za link za resetiranje lozinke.');
+      setResetModal(false);
     }
   }
 
@@ -132,28 +148,28 @@ export default function LoginScreen() {
             secureTextEntry
           />
 
-          {!jeRegistracija && (
-            <>
-              <View style={styles.zapamtiRed}>
-                <Text style={styles.zapamtiTekst}>Zapamti me</Text>
-                <Switch
-                  value={zapamti}
-                  onValueChange={setZapamti}
-                  trackColor={{ false: '#D9CFC4', true: '#6B2737' }}
-                  thumbColor={zapamti ? '#F2EDE4' : '#fff'}
-                />
-              </View>
+          {!jeRegistracija && Platform.OS !== 'web' && (
+            <View style={styles.zapamtiRed}>
+              <Text style={styles.zapamtiTekst}>Zapamti me</Text>
+              <Switch
+                value={zapamti}
+                onValueChange={setZapamti}
+                trackColor={{ false: '#D9CFC4', true: '#6B2737' }}
+                thumbColor={zapamti ? '#F2EDE4' : '#fff'}
+              />
+            </View>
+          )}
 
-              <TouchableOpacity
-                style={styles.zaboravioGumb}
-                onPress={() => {
-                  setResetEmail(email);
-                  setResetModal(true);
-                }}
-              >
-                <Text style={styles.zaboravioTekst}>Zaboravili ste lozinku?</Text>
-              </TouchableOpacity>
-            </>
+          {!jeRegistracija && (
+            <TouchableOpacity
+              style={styles.zaboravioGumb}
+              onPress={() => {
+                setResetEmail(email);
+                setResetModal(true);
+              }}
+            >
+              <Text style={styles.zaboravioTekst}>Zaboravili ste lozinku?</Text>
+            </TouchableOpacity>
           )}
 
           {greska !== '' && (

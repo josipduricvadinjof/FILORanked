@@ -1,4 +1,4 @@
-import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { doc, onSnapshot, setDoc, updateDoc } from 'firebase/firestore';
 import { createContext, ReactNode, useContext, useEffect, useRef, useState } from 'react';
 import { db } from '../firebaseConfig';
 import { useAuth } from './AuthContext';
@@ -31,8 +31,8 @@ type AppContextType = {
   sekunde: number;
   onboardingGotov: boolean;
   ucitavanje: boolean;
-  checkin: () => void;
-  checkout: () => void;
+  checkin: () => Promise<void>;
+  checkout: () => Promise<void>;
   spremiKorisnika: (ime: string, nadimak: string) => void;
   azurirajProfil: (novoIme: string, noviNadimak: string, novaSlika?: string) => Promise<void>;
 };
@@ -91,18 +91,15 @@ function provjeriResetove(k: Korisnik): Partial<Korisnik> {
     azuriranje.zadnjiResetMjesec = mjesecKljuc;
   }
 
-  // Provjeri streak — ako nije bio jucer ni danas, resetiraj
   if (k.zadnjiPosjet) {
     const zadnji = new Date(k.zadnjiPosjet);
     const danas = new Date();
     const juce = new Date();
     juce.setDate(danas.getDate() - 1);
-
-    const zadnjiDan = zadnji.toDateString();
-    const danasStr = danas.toDateString();
-    const juceStr = juce.toDateString();
-
-    if (zadnjiDan !== danasStr && zadnjiDan !== juceStr) {
+    if (
+      zadnji.toDateString() !== danas.toDateString() &&
+      zadnji.toDateString() !== juce.toDateString()
+    ) {
       azuriranje.streak = 0;
     }
   }
@@ -117,68 +114,102 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [sekunde, setSekunde] = useState(0);
   const [ucitavanje, setUcitavanje] = useState(true);
   const intervalRef = useRef<any>(null);
+  const sekundeRef = useRef(0);
+  const aktivanRef = useRef(false); // prati aktivan bez stale closure
 
   const onboardingGotov = korisnik.ime !== '';
 
   useEffect(() => {
-    if (authKorisnik) {
-      ucitajPodatke(authKorisnik.uid);
-    } else {
+    sekundeRef.current = sekunde;
+  }, [sekunde]);
+
+  useEffect(() => {
+    aktivanRef.current = aktivan;
+  }, [aktivan]);
+
+  useEffect(() => {
+    if (!authKorisnik) {
       setKorisnik(defaultKorisnik);
+      setAktivan(false);
+      setSekunde(0);
+      clearInterval(intervalRef.current);
       setUcitavanje(false);
+      return;
     }
-  }, [authKorisnik]);
 
-  async function ucitajPodatke(uid: string) {
-    try {
-      setUcitavanje(true);
-      const ref = doc(db, 'korisnici', uid);
-      const snap = await getDoc(ref);
-      if (snap.exists()) {
-        const data = snap.data();
-        const ucitani: Korisnik = {
-          ime: data.ime || '',
-          nadimak: data.nadimak || '',
-          slika: data.slika || '',
-          ukupnoSekundi: data.ukupnoSekundi || 0,
-          dnevnoSekundi: data.dnevnoSekundi || 0,
-          tjednoSekundi: data.tjednoSekundi || 0,
-          mjesecnoSekundi: data.mjesecnoSekundi || 0,
-          zadnjiResetDan: data.zadnjiResetDan || '',
-          zadnjiResetTjedan: data.zadnjiResetTjedan || '',
-          zadnjiResetMjesec: data.zadnjiResetMjesec || '',
-          sesije: data.sesije || [],
-          streak: data.streak || 0,
-          zadnjiPosjet: data.zadnjiPosjet || '',
-        };
+    setUcitavanje(true);
+    const ref = doc(db, 'korisnici', authKorisnik.uid);
 
-        const resetovi = provjeriResetove(ucitani);
-        if (Object.keys(resetovi).length > 0) {
-          const azuriran = { ...ucitani, ...resetovi };
-          setKorisnik(azuriran);
-          await updateDoc(ref, resetovi);
-        } else {
-          setKorisnik(ucitani);
-        }
+    // Real-time listener — reagira na svaku promjenu u Firestoreu
+    const unsubscribe = onSnapshot(ref, async (snap) => {
+      if (!snap.exists()) {
+        setUcitavanje(false);
+        return;
       }
-    } catch (e) {
-      console.log('Greška učitavanja:', e);
-    }
-    setUcitavanje(false);
-  }
+
+      const data = snap.data();
+
+      const ucitani: Korisnik = {
+        ime: data.ime || '',
+        nadimak: data.nadimak || '',
+        slika: data.slika || '',
+        ukupnoSekundi: data.ukupnoSekundi || 0,
+        dnevnoSekundi: data.dnevnoSekundi || 0,
+        tjednoSekundi: data.tjednoSekundi || 0,
+        mjesecnoSekundi: data.mjesecnoSekundi || 0,
+        zadnjiResetDan: data.zadnjiResetDan || '',
+        zadnjiResetTjedan: data.zadnjiResetTjedan || '',
+        zadnjiResetMjesec: data.zadnjiResetMjesec || '',
+        sesije: data.sesije || [],
+        streak: data.streak || 0,
+        zadnjiPosjet: data.zadnjiPosjet || '',
+      };
+
+      const resetovi = provjeriResetove(ucitani);
+      if (Object.keys(resetovi).length > 0) {
+        const azuriran = { ...ucitani, ...resetovi };
+        setKorisnik(azuriran);
+        await updateDoc(ref, resetovi);
+      } else {
+        setKorisnik(ucitani);
+      }
+
+      // Pokreni ili zaustavi timer ovisno o aktivnaSesija u Firestoreu
+      if (data.aktivnaSesija === true && !aktivanRef.current) {
+        // Sesija postala aktivna — pokreni timer
+        setAktivan(true);
+        setSekunde(0);
+        sekundeRef.current = 0;
+        if (intervalRef.current) clearInterval(intervalRef.current);
+        intervalRef.current = setInterval(() => {
+          setSekunde(s => s + 1);
+        }, 1000);
+      } else if (data.aktivnaSesija === false && aktivanRef.current) {
+        // Sesija završena izvana — zaustavi timer
+        setAktivan(false);
+        clearInterval(intervalRef.current);
+        setSekunde(0);
+        sekundeRef.current = 0;
+      }
+
+      setUcitavanje(false);
+    });
+
+    return () => {
+      unsubscribe();
+      clearInterval(intervalRef.current);
+    };
+  }, [authKorisnik]);
 
   async function spremiKorisnika(ime: string, nadimak: string) {
     if (!authKorisnik) return;
-    const danKljuc = getDanKljuc();
-    const tjedanKljuc = getTjedanKljuc();
-    const mjesecKljuc = getMjesecKljuc();
     const noviKorisnik: Korisnik = {
       ...defaultKorisnik,
       ime,
       nadimak,
-      zadnjiResetDan: danKljuc,
-      zadnjiResetTjedan: tjedanKljuc,
-      zadnjiResetMjesec: mjesecKljuc,
+      zadnjiResetDan: getDanKljuc(),
+      zadnjiResetTjedan: getTjedanKljuc(),
+      zadnjiResetMjesec: getMjesecKljuc(),
     };
     setKorisnik(noviKorisnik);
     try {
@@ -190,12 +221,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   async function azurirajProfil(novoIme: string, noviNadimak: string, novaSlika?: string) {
     if (!authKorisnik) return;
-    const azuriran = {
-      ...korisnik,
-      ime: novoIme,
-      nadimak: noviNadimak,
-      slika: novaSlika ?? korisnik.slika,
-    };
+    const azuriran = { ...korisnik, ime: novoIme, nadimak: noviNadimak, slika: novaSlika ?? korisnik.slika };
     setKorisnik(azuriran);
     try {
       await updateDoc(doc(db, 'korisnici', authKorisnik.uid), {
@@ -208,12 +234,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  function checkin() {
-    setAktivan(true);
-    setSekunde(0);
-    intervalRef.current = setInterval(() => {
-      setSekunde(s => s + 1);
-    }, 1000);
+  async function checkin() {
+    if (!authKorisnik) return;
+    // onSnapshot će automatski pokrenuti timer kada vidi aktivnaSesija: true
+    try {
+      await updateDoc(doc(db, 'korisnici', authKorisnik.uid), {
+        aktivnaSesija: true,
+        vrijemeCheckin: new Date().toISOString(),
+      });
+    } catch (e) {
+      console.log('Greška checkin:', e);
+    }
   }
 
   async function checkout() {
@@ -221,22 +252,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setAktivan(false);
     clearInterval(intervalRef.current);
 
+    const trenutnoSekunde = sekundeRef.current;
     const danas = new Date().toDateString();
     const novaSesija: Sesija = {
       id: Date.now(),
       datum: danas,
-      trajanje: sekunde,
+      trajanje: trenutnoSekunde,
     };
 
     const resetovi = provjeriResetove(korisnik);
-
     const noviKorisnik: Korisnik = {
       ...korisnik,
       ...resetovi,
-      ukupnoSekundi: korisnik.ukupnoSekundi + sekunde,
-      dnevnoSekundi: (resetovi.dnevnoSekundi ?? korisnik.dnevnoSekundi) + sekunde,
-      tjednoSekundi: (resetovi.tjednoSekundi ?? korisnik.tjednoSekundi) + sekunde,
-      mjesecnoSekundi: (resetovi.mjesecnoSekundi ?? korisnik.mjesecnoSekundi) + sekunde,
+      ukupnoSekundi: korisnik.ukupnoSekundi + trenutnoSekunde,
+      dnevnoSekundi: (resetovi.dnevnoSekundi ?? korisnik.dnevnoSekundi) + trenutnoSekunde,
+      tjednoSekundi: (resetovi.tjednoSekundi ?? korisnik.tjednoSekundi) + trenutnoSekunde,
+      mjesecnoSekundi: (resetovi.mjesecnoSekundi ?? korisnik.mjesecnoSekundi) + trenutnoSekunde,
       sesije: [novaSesija, ...korisnik.sesije],
       streak: korisnik.zadnjiPosjet === danas ? korisnik.streak : korisnik.streak + 1,
       zadnjiPosjet: danas,
@@ -244,9 +275,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     setKorisnik(noviKorisnik);
     setSekunde(0);
+    sekundeRef.current = 0;
 
     try {
       await updateDoc(doc(db, 'korisnici', authKorisnik.uid), {
+        aktivnaSesija: false,
+        vrijemeCheckin: null,
         ukupnoSekundi: noviKorisnik.ukupnoSekundi,
         dnevnoSekundi: noviKorisnik.dnevnoSekundi,
         tjednoSekundi: noviKorisnik.tjednoSekundi,

@@ -171,7 +171,7 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F2EDE4', padding: 20, paddingTop: 60 },
+  container: { flex: 1, backgroundColor: '#F2EDE4', padding: 20, paddingTop: 60, paddingBottom: 90 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
   pozdrav: { fontSize: 24, fontWeight: 'bold', color: '#2C1810' },
   datum: { fontSize: 13, color: '#8B7355', marginTop: 2 },

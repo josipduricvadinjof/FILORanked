@@ -16,8 +16,14 @@ function NavigationHandler() {
 
   useEffect(() => {
     if (!spreman || ucitavanje) return;
+
     const uTabs = segments[0] === '(tabs)';
     const naLoginu = segments[0] === 'login';
+    const naCheckinu = (segments[0] as string) === 'checkin';
+    const naCheckoutu = (segments[0] as string) === 'checkout';
+
+    // Checkin i checkout su javne stranice — ne diramo ih
+    if (naCheckinu || naCheckoutu) return;
 
     if (!korisnik && !naLoginu) {
       router.replace('/login');
@@ -38,6 +44,8 @@ export default function RootLayout() {
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="login" />
           <Stack.Screen name="onboarding" />
+          <Stack.Screen name="checkin" />
+          <Stack.Screen name="checkout" />
         </Stack>
         <NavigationHandler />
       </AppProvider>
