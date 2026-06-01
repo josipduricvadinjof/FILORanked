@@ -1,15 +1,15 @@
-# Brisanje računa — NSK Ranked
+# Brisanje računa — FILORanked
 
 ## Kako zatražiti brisanje računa
 
-Ako želite obrisati svoj NSK Ranked račun i sve povezane podatke, 
+Ako želite obrisati svoj FILORanked račun i sve povezane podatke, 
 pošaljite email na:
 
 **josipduricvadinjo@gmail.com**
 
 U emailu navedite:
 - Email adresu povezanu s vašim računom
-- Naslov: "Brisanje računa — NSK Ranked"
+- Naslov: "Brisanje računa — FILORanked"
 
 ## Što se briše
 
