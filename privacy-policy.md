@@ -1,10 +1,10 @@
-# Politika privatnosti — NSK Ranked
+# Politika privatnosti — FILORanked
 
 Zadnje ažuriranje: 10. svibnja 2026.
 
 ## Što prikupljamo
 
-NSK Ranked prikuplja sljedeće podatke:
+FILORanked prikuplja sljedeće podatke:
 - Email adresa (za prijavu)
 - Ime i nadimak (koje sami unosite)
 - Profilna slika (opcionalno)
