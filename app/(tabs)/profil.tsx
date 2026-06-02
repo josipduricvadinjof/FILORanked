@@ -12,6 +12,7 @@ const achievementi = [
   { naziv: '👑 FILO legenda', opis: 'Provedi 200h u knjižnici', uvjet: (s: number) => s >= 720000 },
   { naziv: '🔥 Tjedan streak', opis: '7 dana zaredom', uvjet: (_: number, streak: number) => streak >= 7 },
   { naziv: '💪 Mjesec streak', opis: '30 dana zaredom', uvjet: (_: number, streak: number) => streak >= 30 },
+  { naziv: '⚡ Maraton', opis: 'Ostani 5h u jednoj sesiji', uvjet: (_: number, __: number, maxSesija = 0) => maxSesija >= 18000 },
 ];
 
 function Level(sekunde: number): string {
@@ -33,8 +34,13 @@ export default function ProfilScreen() {
   const { korisnik, azurirajProfil } = useApp();
   const { odjava } = useAuth();
   const level = Level(korisnik.ukupnoSekundi);
-  const osvojeni = achievementi.filter(a => a.uvjet(korisnik.ukupnoSekundi, korisnik.streak));
-  const neosvojeni = achievementi.filter(a => !a.uvjet(korisnik.ukupnoSekundi, korisnik.streak));
+
+  const maxSesija = korisnik.sesije.length > 0
+    ? Math.max(...korisnik.sesije.map(s => s.trajanje))
+    : 0;
+
+  const osvojeni = achievementi.filter(a => a.uvjet(korisnik.ukupnoSekundi, korisnik.streak, maxSesija));
+  const neosvojeni = achievementi.filter(a => !a.uvjet(korisnik.ukupnoSekundi, korisnik.streak, maxSesija));
   const postotak = Math.min((korisnik.ukupnoSekundi / 720000) * 100, 100);
 
   const [modalVidljiv, setModalVidljiv] = useState(false);
