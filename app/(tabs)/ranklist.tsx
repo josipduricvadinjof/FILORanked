@@ -1,6 +1,6 @@
 import { collection, onSnapshot, orderBy, query } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { formatirajSate } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
 import { db } from '../../firebaseConfig';
@@ -13,6 +13,7 @@ type KorisnikRang = {
   dnevnoSekundi: number;
   tjednoSekundi: number;
   mjesecnoSekundi: number;
+  slika: string;
 };
 
 const medalje = ['🥇', '🥈', '🥉'];
@@ -34,6 +35,7 @@ export default function RangListaScreen() {
         dnevnoSekundi: doc.data().dnevnoSekundi || 0,
         tjednoSekundi: doc.data().tjednoSekundi || 0,
         mjesecnoSekundi: doc.data().mjesecnoSekundi || 0,
+        slika: doc.data().slika || '',
       }));
       setKorisnici(lista);
       setUcitavanje(false);
@@ -77,19 +79,28 @@ export default function RangListaScreen() {
           <Text style={styles.sredinaTekst}>Još nema korisnika. Budi prvi! 🚀</Text>
         </View>
       ) : (
-        <ScrollView>
+        <ScrollView showsVerticalScrollIndicator={false}>
           {sortirani.map((k, index) => {
             const jaJa = k.uid === authKorisnik?.uid;
             const sekunde = getSekunde(k);
             if (sekunde === 0 && aktivan !== 'ukupno') return null;
             return (
               <View key={k.uid} style={[styles.red, jaJa && styles.redAktivan]}>
-                <Text style={styles.medal}>{index < 3 ? medalje[index] : `${index + 1}`}</Text>
-                <View style={[styles.avatar, jaJa && styles.avatarAktivan]}>
-                  <Text style={[styles.avatarTekst, jaJa && styles.avatarTekstAktivan]}>
-                    {k.ime.slice(0, 2).toUpperCase()}
-                  </Text>
-                </View>
+                <Text style={styles.medal}>
+                  {index < 3 ? medalje[index] : `${index + 1}`}
+                </Text>
+                {k.slika ? (
+                  <Image
+                    source={{ uri: `data:image/jpeg;base64,${k.slika}` }}
+                    style={styles.avatarSlika}
+                  />
+                ) : (
+                  <View style={[styles.avatar, jaJa && styles.avatarAktivan]}>
+                    <Text style={[styles.avatarTekst, jaJa && styles.avatarTekstAktivan]}>
+                      {k.ime.slice(0, 2).toUpperCase()}
+                    </Text>
+                  </View>
+                )}
                 <View style={styles.infoKolona}>
                   <Text style={[styles.ime, jaJa && styles.imeAktivan]}>
                     {k.ime} {jaJa && '(ti)'}
@@ -116,10 +127,18 @@ const styles = StyleSheet.create({
   tabTekstAktivan: { color: '#F2EDE4' },
   sredina: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   sredinaTekst: { fontSize: 15, color: '#8B7355' },
-  red: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 10, gap: 12, borderWidth: 0.5, borderColor: '#D9CFC4' },
+  red: {
+    flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff',
+    borderRadius: 12, padding: 14, marginBottom: 10, gap: 12,
+    borderWidth: 0.5, borderColor: '#D9CFC4',
+  },
   redAktivan: { borderWidth: 2, borderColor: '#6B2737', backgroundColor: '#FDF8F5' },
   medal: { fontSize: 20, width: 30, textAlign: 'center' },
-  avatar: { width: 42, height: 42, borderRadius: 21, backgroundColor: '#F2EDE4', alignItems: 'center', justifyContent: 'center' },
+  avatarSlika: { width: 42, height: 42, borderRadius: 21 },
+  avatar: {
+    width: 42, height: 42, borderRadius: 21,
+    backgroundColor: '#F2EDE4', alignItems: 'center', justifyContent: 'center',
+  },
   avatarAktivan: { backgroundColor: '#6B2737' },
   avatarTekst: { color: '#6B2737', fontWeight: 'bold', fontSize: 13 },
   avatarTekstAktivan: { color: '#F2EDE4' },
