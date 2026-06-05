@@ -115,7 +115,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [ucitavanje, setUcitavanje] = useState(true);
   const intervalRef = useRef<any>(null);
   const sekundeRef = useRef(0);
-  const aktivanRef = useRef(false); // prati aktivan bez stale closure
+  const aktivanRef = useRef(false);
+  // Ključni fix: pamti što je Firestore zadnji put rekao za aktivnaSesija
+  const firestoreAktivanRef = useRef<boolean | null>(null);
 
   const onboardingGotov = korisnik.ime !== '';
 
@@ -134,13 +136,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setSekunde(0);
       clearInterval(intervalRef.current);
       setUcitavanje(false);
+      firestoreAktivanRef.current = null;
       return;
     }
 
     setUcitavanje(true);
     const ref = doc(db, 'korisnici', authKorisnik.uid);
 
-    // Real-time listener — reagira na svaku promjenu u Firestoreu
     const unsubscribe = onSnapshot(ref, async (snap) => {
       if (!snap.exists()) {
         setUcitavanje(false);
@@ -174,9 +176,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setKorisnik(ucitani);
       }
 
-      // Pokreni ili zaustavi timer ovisno o aktivnaSesija u Firestoreu
-      if (data.aktivnaSesija === true && !aktivanRef.current) {
-        // Sesija postala aktivna — pokreni timer
+      const novoStanje = data.aktivnaSesija === true;
+      const prethodnoStanje = firestoreAktivanRef.current;
+
+      // Pokreni timer SAMO ako se stanje promijenilo iz false -> true
+      if (novoStanje === true && prethodnoStanje === false) {
         setAktivan(true);
         setSekunde(0);
         sekundeRef.current = 0;
@@ -184,13 +188,31 @@ export function AppProvider({ children }: { children: ReactNode }) {
         intervalRef.current = setInterval(() => {
           setSekunde(s => s + 1);
         }, 1000);
-      } else if (data.aktivnaSesija === false && aktivanRef.current) {
-        // Sesija završena izvana — zaustavi timer
+      }
+      // Zaustavi timer SAMO ako se stanje promijenilo iz true -> false
+      else if (novoStanje === false && prethodnoStanje === true) {
         setAktivan(false);
         clearInterval(intervalRef.current);
         setSekunde(0);
         sekundeRef.current = 0;
       }
+      // Prvo učitavanje — samo postavi stanje bez pokretanja timera ako je false
+      else if (prethodnoStanje === null) {
+        if (novoStanje === true) {
+          setAktivan(true);
+          setSekunde(0);
+          sekundeRef.current = 0;
+          if (intervalRef.current) clearInterval(intervalRef.current);
+          intervalRef.current = setInterval(() => {
+            setSekunde(s => s + 1);
+          }, 1000);
+        } else {
+          setAktivan(false);
+        }
+      }
+
+      // Zapamti novo stanje iz Firestorea
+      firestoreAktivanRef.current = novoStanje;
 
       setUcitavanje(false);
     });
@@ -236,7 +258,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   async function checkin() {
     if (!authKorisnik) return;
-    // onSnapshot će automatski pokrenuti timer kada vidi aktivnaSesija: true
     try {
       await updateDoc(doc(db, 'korisnici', authKorisnik.uid), {
         aktivnaSesija: true,
