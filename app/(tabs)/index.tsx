@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router';
 import { collection, onSnapshot, orderBy, query } from 'firebase/firestore';
-import { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { Animated, Easing, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { formatirajSate, formatirajVrijeme, useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
 import { db } from '../../firebaseConfig';
@@ -11,7 +11,7 @@ function Level(sekunde: number): string {
   if (sekunde >= 360000) return '🏛 Veteran';
   if (sekunde >= 180000) return '⭐ Akademik';
   if (sekunde >= 36000) return '📖 Čitač';
-  return '🌱 Početnik';
+  return '🌱 Novak';
 }
 
 export default function HomeScreen() {
@@ -23,6 +23,13 @@ export default function HomeScreen() {
   const [tjedniRang, setTjedniRang] = useState<number | null>(null);
   const [ukupniRang, setUkupniRang] = useState<number | null>(null);
 
+  // Animacije
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(30)).current;
+  const logoRotate = useRef(new Animated.Value(0)).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const rangAnim = useRef(new Animated.Value(0)).current;
+
   const level = Level(korisnik.ukupnoSekundi);
   const postotak = Math.min((korisnik.ukupnoSekundi / 720000) * 100, 100);
   const doLegenda = Math.max(0, Math.floor((720000 - korisnik.ukupnoSekundi) / 3600));
@@ -30,6 +37,73 @@ export default function HomeScreen() {
   const danas = new Date().toLocaleDateString('hr-HR', {
     weekday: 'long', day: 'numeric', month: 'long'
   });
+
+  useEffect(() => {
+    // Fade in animacija pri učitavanju
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 600,
+        easing: Easing.out(Easing.exp),
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    // Logo blaga rotacija
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(logoRotate, {
+          toValue: 1,
+          duration: 3000,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+        Animated.timing(logoRotate, {
+          toValue: 0,
+          duration: 3000,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+
+    // Puls animacija za streak badge
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1.1,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+  }, []);
+
+  useEffect(() => {
+    // Animacija ranga kad se promijeni
+    Animated.sequence([
+      Animated.timing(rangAnim, {
+        toValue: 1.2,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+      Animated.timing(rangAnim, {
+        toValue: 1,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [dnevniRang, tjedniRang, ukupniRang]);
 
   useEffect(() => {
     if (!authKorisnik) return;
@@ -59,59 +133,74 @@ export default function HomeScreen() {
     return `#${rang}`;
   }
 
+  const logoRotateInterpolate = logoRotate.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['-5deg', '5deg'],
+  });
+
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.pozdrav}>Bok, {korisnik.ime.split(' ')[0]}! 👋</Text>
-          <Text style={styles.datum}>{danas}</Text>
+
+      <Animated.View style={[styles.header, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+        <View style={styles.headerLijevo}>
+          <Animated.Image
+            source={require('../../assets/images/logo.png')}
+            style={[styles.logo, { transform: [{ rotate: logoRotateInterpolate }] }]}
+            resizeMode="contain"
+          />
+          <View>
+            <Text style={styles.pozdrav}>Bok, {korisnik.ime.split(' ')[0]}! 👋</Text>
+            <Text style={styles.datum}>{danas}</Text>
+          </View>
         </View>
-        <View style={styles.streakBadge}>
+        <Animated.View style={[styles.streakBadge, { transform: [{ scale: pulseAnim }] }]}>
           <Text style={styles.streakEmoji}>🔥</Text>
           <Text style={styles.streakBroj}>{korisnik.streak}</Text>
-        </View>
-      </View>
+        </Animated.View>
+      </Animated.View>
 
-      {aktivan ? (
-        <View style={styles.timerKartica}>
-          <Text style={styles.timerNaslov}>⏱ Aktivna sesija</Text>
-          <Text style={styles.timer}>{formatirajVrijeme(sekunde)}</Text>
-          <Text style={styles.timerInfo}>📍 Knjižnica Filozofskog fakulteta</Text>
-          <TouchableOpacity style={styles.timerGumb} onPress={() => router.push('/(tabs)/skeniraj')}>
-            <Text style={styles.timerGumbTekst}>Skeniraj izlaz</Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
-        <TouchableOpacity style={styles.ulazGumb} onPress={() => router.push('/(tabs)/skeniraj')}>
-          <Text style={styles.ulazGumbIkona}>📷</Text>
-          <View>
-            <Text style={styles.ulazGumbNaslov}>Skeniraj QR kod</Text>
-            <Text style={styles.ulazGumbOpis}>Prijavi dolazak u knjižnicu</Text>
+      <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
+        {aktivan ? (
+          <View style={styles.timerKartica}>
+            <Text style={styles.timerNaslov}>⏱ Aktivna sesija</Text>
+            <Text style={styles.timer}>{formatirajVrijeme(sekunde)}</Text>
+            <Text style={styles.timerInfo}>📍 Knjižnica Filozofskog fakulteta</Text>
+            <TouchableOpacity style={styles.timerGumb} onPress={() => router.push('/(tabs)/skeniraj')}>
+              <Text style={styles.timerGumbTekst}>Skeniraj izlaz</Text>
+            </TouchableOpacity>
           </View>
-        </TouchableOpacity>
-      )}
+        ) : (
+          <TouchableOpacity style={styles.ulazGumb} onPress={() => router.push('/(tabs)/skeniraj')}>
+            <Text style={styles.ulazGumbIkona}>📷</Text>
+            <View>
+              <Text style={styles.ulazGumbNaslov}>Skeniraj QR kod</Text>
+              <Text style={styles.ulazGumbOpis}>Prijavi dolazak u knjižnicu</Text>
+            </View>
+          </TouchableOpacity>
+        )}
+      </Animated.View>
 
-      <View style={styles.rangKartica}>
+      <Animated.View style={[styles.rangKartica, { opacity: fadeAnim }]}>
         <Text style={styles.rangNaslov}>Tvoj rang</Text>
         <View style={styles.rangRed}>
-          <View style={styles.rangStupac}>
+          <Animated.View style={[styles.rangStupac, { transform: [{ scale: rangAnim }] }]}>
             <Text style={styles.rangBroj}>{rangTekst(dnevniRang)}</Text>
             <Text style={styles.rangLabel}>danas</Text>
-          </View>
+          </Animated.View>
           <View style={styles.rangDivider} />
-          <View style={styles.rangStupac}>
+          <Animated.View style={[styles.rangStupac, { transform: [{ scale: rangAnim }] }]}>
             <Text style={styles.rangBroj}>{rangTekst(tjedniRang)}</Text>
             <Text style={styles.rangLabel}>tjedno</Text>
-          </View>
+          </Animated.View>
           <View style={styles.rangDivider} />
-          <View style={styles.rangStupac}>
+          <Animated.View style={[styles.rangStupac, { transform: [{ scale: rangAnim }] }]}>
             <Text style={styles.rangBroj}>{rangTekst(ukupniRang)}</Text>
             <Text style={styles.rangLabel}>ukupno</Text>
-          </View>
+          </Animated.View>
         </View>
-      </View>
+      </Animated.View>
 
-      <View style={styles.statsRed}>
+      <Animated.View style={[styles.statsRed, { opacity: fadeAnim }]}>
         <View style={styles.statKartica}>
           <Text style={styles.statBroj}>{formatirajSate(korisnik.dnevnoSekundi)}</Text>
           <Text style={styles.statLabel}>danas</Text>
@@ -124,22 +213,22 @@ export default function HomeScreen() {
           <Text style={styles.statBroj}>{formatirajSate(korisnik.ukupnoSekundi)}</Text>
           <Text style={styles.statLabel}>ukupno</Text>
         </View>
-      </View>
+      </Animated.View>
 
-      <View style={styles.levelKartica}>
+      <Animated.View style={[styles.levelKartica, { opacity: fadeAnim }]}>
         <View style={styles.levelRed}>
           <Text style={styles.levelNaziv}>{level}</Text>
           <Text style={styles.levelBroj}>{Math.round(postotak)}%</Text>
         </View>
         <View style={styles.progressBg}>
-          <View style={[styles.progressFill, { width: `${postotak}%` }]} />
+          <Animated.View style={[styles.progressFill, { width: `${postotak}%` }]} />
         </View>
         <Text style={styles.levelInfo}>
           {doLegenda > 0 ? `${doLegenda}h do "Legenda FILO"` : '👑 Dostigao si najviši level!'}
         </Text>
-      </View>
+      </Animated.View>
 
-      <View style={styles.brziPristup}>
+      <Animated.View style={[styles.brziPristup, { opacity: fadeAnim }]}>
         <Text style={styles.brziPristupNaslov}>Brzi pristup</Text>
         <View style={styles.brziPristupRed}>
           <TouchableOpacity style={styles.brziGumb} onPress={() => router.push('/(tabs)/ranklist')}>
@@ -155,26 +244,29 @@ export default function HomeScreen() {
             <Text style={styles.brziGumbTekst}>Statistike</Text>
           </TouchableOpacity>
         </View>
-      </View>
+      </Animated.View>
 
       {korisnik.sesije.length > 0 && (
-        <View style={styles.zadnjaSesija}>
+        <Animated.View style={[styles.zadnjaSesija, { opacity: fadeAnim }]}>
           <Text style={styles.zadnjaSesijaNaslov}>Zadnja sesija</Text>
           <View style={styles.zadnjaSesijaRed}>
             <Text style={styles.zadnjaSesijaDatum}>{korisnik.sesije[0].datum}</Text>
             <Text style={styles.zadnjaSesijaTrajanje}>{formatirajSate(korisnik.sesije[0].trajanje)}</Text>
           </View>
-        </View>
+        </Animated.View>
       )}
+
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F2EDE4', padding: 20, paddingTop: 60, paddingBottom: 90 },
+  container: { flex: 1, backgroundColor: '#F2EDE4', padding: 20, paddingTop: 60 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
-  pozdrav: { fontSize: 24, fontWeight: 'bold', color: '#2C1810' },
-  datum: { fontSize: 13, color: '#8B7355', marginTop: 2 },
+  headerLijevo: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  logo: { width: 40, height: 40, opacity: 0.85 },
+  pozdrav: { fontSize: 22, fontWeight: 'bold', color: '#2C1810' },
+  datum: { fontSize: 12, color: '#8B7355', marginTop: 2 },
   streakBadge: { backgroundColor: '#6B2737', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8, alignItems: 'center' },
   streakEmoji: { fontSize: 16 },
   streakBroj: { fontSize: 18, fontWeight: 'bold', color: '#F2EDE4' },
@@ -212,7 +304,7 @@ const styles = StyleSheet.create({
   brziGumb: { flex: 1, backgroundColor: '#F2EDE4', borderRadius: 10, padding: 12, alignItems: 'center', gap: 6 },
   brziGumbIkona: { fontSize: 24 },
   brziGumbTekst: { fontSize: 11, color: '#2C1810', fontWeight: '500', textAlign: 'center' },
-  zadnjaSesija: { backgroundColor: '#fff', borderRadius: 12, padding: 16, marginBottom: 40, borderWidth: 0.5, borderColor: '#D9CFC4' },
+  zadnjaSesija: { backgroundColor: '#fff', borderRadius: 12, padding: 16, marginBottom: 90, borderWidth: 0.5, borderColor: '#D9CFC4' },
   zadnjaSesijaNaslov: { fontSize: 13, color: '#8B7355', marginBottom: 10, fontWeight: '500' },
   zadnjaSesijaRed: { flexDirection: 'row', justifyContent: 'space-between' },
   zadnjaSesijaDatum: { fontSize: 14, color: '#2C1810' },
