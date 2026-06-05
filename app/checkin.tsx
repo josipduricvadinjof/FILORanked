@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { onAuthStateChanged, signInWithEmailAndPassword } from 'firebase/auth';
+import { signInWithEmailAndPassword } from 'firebase/auth';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
@@ -14,14 +14,13 @@ export default function CheckinScreen() {
   const [ucitavanje, setUcitavanje] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        await napraviCheckin(user.uid);
-      } else {
-        setStatus('login');
-      }
-    });
-    return unsubscribe;
+    // Direktna provjera trenutnog korisnika — bez listenera koji se okida automatski
+    const user = auth.currentUser;
+    if (user) {
+      napraviCheckin(user.uid);
+    } else {
+      setStatus('login');
+    }
   }, []);
 
   async function napraviCheckin(uid: string) {
@@ -43,7 +42,6 @@ export default function CheckinScreen() {
         return;
       }
 
-      // Direktno piši u Firestore — AppContext će pokupiti i pokrenuti timer
       await updateDoc(ref, {
         aktivnaSesija: true,
         vrijemeCheckin: new Date().toISOString(),
