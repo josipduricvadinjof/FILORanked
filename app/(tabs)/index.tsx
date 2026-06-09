@@ -7,11 +7,15 @@ import { useAuth } from '../../context/AuthContext';
 import { db } from '../../firebaseConfig';
 
 function Level(sekunde: number): string {
+  if (sekunde >= 1080000) return '🏠 Idi doma...';
+  if (sekunde >= 900000) return '🎓 FER-ovac';
   if (sekunde >= 720000) return '👑 Legenda FILO';
   if (sekunde >= 360000) return '🏛 Veteran';
   if (sekunde >= 180000) return '⭐ Akademik';
-  if (sekunde >= 36000) return '📖 Čitač';
-  return '🌱 Novak';
+  if (sekunde >= 72000) return '📖 Kampanjac';
+  if (sekunde >= 36000) return '🏃 Rekreativac';
+  if (sekunde >= 3600) return '🌱 Početnik';
+  return '👶 Brucoš';
 }
 
 export default function HomeScreen() {

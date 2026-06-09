@@ -5,22 +5,28 @@ import { formatirajSate, useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
 
 const achievementi = [
-  { naziv: '🌅 Ranoranioc', opis: 'Dođi prije 8h', uvjet: (s: number) => s > 0 },
+  { naziv: '🌅 Ranoranioc', opis: 'Dođi u knjižnicu', uvjet: (s: number) => s > 0 },
+  { naziv: '🦉 Noćna sova', opis: 'Ostani u knjižnici nakon 19:30', uvjet: (s: number, streak: number, nocna: boolean) => nocna },
   { naziv: '📚 10 sati', opis: 'Provedi 10h u knjižnici', uvjet: (s: number) => s >= 36000 },
   { naziv: '📖 50 sati', opis: 'Provedi 50h u knjižnici', uvjet: (s: number) => s >= 180000 },
   { naziv: '🏛 100 sati', opis: 'Provedi 100h u knjižnici', uvjet: (s: number) => s >= 360000 },
-  { naziv: '👑 FILO legenda', opis: 'Provedi 200h u knjižnici', uvjet: (s: number) => s >= 720000 },
-  { naziv: '🔥 Tjedan streak', opis: '7 dana zaredom', uvjet: (_: number, streak: number) => streak >= 7 },
-  { naziv: '💪 Mjesec streak', opis: '30 dana zaredom', uvjet: (_: number, streak: number) => streak >= 30 },
-  { naziv: '⚡ Maraton', opis: 'Ostani 5h u jednoj sesiji', uvjet: (_: number, __: number, maxSesija = 0) => maxSesija >= 18000 },
+  { naziv: '👑 Legenda FILO', opis: 'Provedi 200h u knjižnici', uvjet: (s: number) => s >= 720000 },
+  { naziv: '🎓 FER-ovac', opis: 'Provedi 250h u knjižnici', uvjet: (s: number) => s >= 900000 },
+  { naziv: '🏠 Idi doma...', opis: 'Provedi 300h u knjižnici', uvjet: (s: number) => s >= 1080000 },
+  { naziv: '🔥 Tjedni streak', opis: '7 dana zaredom', uvjet: (_: number, streak: number) => streak >= 7 },
+  { naziv: '💪 Mjesečni streak', opis: '30 dana zaredom', uvjet: (_: number, streak: number) => streak >= 30 },
 ];
 
 function Level(sekunde: number): string {
-  if (sekunde >= 720000) return '👑 FILO legenda';
+  if (sekunde >= 1080000) return '🏠 Idi doma...';
+  if (sekunde >= 900000) return '🎓 FER-ovac';
+  if (sekunde >= 720000) return '👑 Legenda FILO';
   if (sekunde >= 360000) return '🏛 Veteran';
   if (sekunde >= 180000) return '⭐ Akademik';
-  if (sekunde >= 36000) return '📖 Čitač';
-  return '🌱 Početnik';
+  if (sekunde >= 72000) return '📖 Kampanjac';
+  if (sekunde >= 36000) return '🏃 Rekreativac';
+  if (sekunde >= 3600) return '🌱 Početnik';
+  return '👶 Brucoš';
 }
 
 function formatirajDatum(datumStr: string): string {
@@ -35,13 +41,15 @@ export default function ProfilScreen() {
   const { odjava } = useAuth();
   const level = Level(korisnik.ukupnoSekundi);
 
-  const maxSesija = korisnik.sesije.length > 0
-    ? Math.max(...korisnik.sesije.map(s => s.trajanje))
-    : 0;
+  // Provjeri noćna sova — ima li sesija koja je završila nakon 19:30
+  const nocnaSova = korisnik.sesije.some(s => {
+    const d = new Date(s.datum);
+    return d.getHours() >= 19 && d.getMinutes() >= 30;
+  });
 
-  const osvojeni = achievementi.filter(a => a.uvjet(korisnik.ukupnoSekundi, korisnik.streak, maxSesija));
-  const neosvojeni = achievementi.filter(a => !a.uvjet(korisnik.ukupnoSekundi, korisnik.streak, maxSesija));
-  const postotak = Math.min((korisnik.ukupnoSekundi / 720000) * 100, 100);
+  const osvojeni = achievementi.filter(a => a.uvjet(korisnik.ukupnoSekundi, korisnik.streak, nocnaSova));
+  const neosvojeni = achievementi.filter(a => !a.uvjet(korisnik.ukupnoSekundi, korisnik.streak, nocnaSova));
+  const postotak = Math.min((korisnik.ukupnoSekundi / 1080000) * 100, 100);
 
   const [modalVidljiv, setModalVidljiv] = useState(false);
   const [novoIme, setNovoIme] = useState(korisnik.ime);
@@ -101,13 +109,7 @@ export default function ProfilScreen() {
       <Text style={styles.naslov}>👤 Profil</Text>
 
       <View style={styles.kartica}>
-        <TouchableOpacity onPress={() => {
-  setNovoIme(korisnik.ime);
-  setNoviNadimak(korisnik.nadimak);
-  setPrivremenaSlika(null);
-  setPrivremenaBase64(null);
-  setModalVidljiv(true);
-}} style={styles.avatarWrapper}>
+        <TouchableOpacity onPress={odaberiSliku} style={styles.avatarWrapper}>
           {prikazanaSlika ? (
             <Image source={{ uri: prikazanaSlika }} style={styles.avatarSlika} />
           ) : (
@@ -166,7 +168,7 @@ export default function ProfilScreen() {
           <View style={[styles.progressFill, { width: `${postotak}%` }]} />
         </View>
         <Text style={styles.levelInfo}>
-          {Math.max(0, Math.floor((720000 - korisnik.ukupnoSekundi) / 3600))}h do "FILO Legenda"
+          {Math.max(0, Math.floor((1080000 - korisnik.ukupnoSekundi) / 3600))}h do "Idi doma..."
         </Text>
       </View>
 
